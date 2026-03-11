@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fine-Tuning LLMs for Voice-First Consumer Experiences</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #0c0c14;
+  --bg2: #101020;
+  --surface: #151528;
+  --surface2: #1c1c36;
+  --surface3: #232348;
+  --border: #2d2d55;
+  --border-hi: #3d3d68;
+  --tx: #d0d0e8;
+  --tx2: #8888b0;
+  --txb: #f0f0ff;
+  --accent: #00eec8;
+  --accent2: #00c8a8;
+  --accentG: rgba(0,238,200,0.12);
+  --blue: #5599ff;
+  --blueG: rgba(85,153,255,0.14);
+  --purple: #9977ff;
+  --purpleG: rgba(153,119,255,0.14);
+  --orange: #ff9944;
+  --orangeG: rgba(255,153,68,0.14);
+  --pink: #ff5599;
+  --pinkG: rgba(255,85,153,0.14);
+  --green: #44ee88;
+  --greenG: rgba(68,238,136,0.14);
+  --yellow: #ffdd44;
+  --yellowG: rgba(255,221,68,0.14);
+  --red: #ff4455;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+.mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ===== HEADER ===== */
+header {
+  padding: 44px 48px 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+header .badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--orangeG); border: 1px solid rgba(255,153,68,0.22);
+  border-radius: 99px; padding: 6px 16px 6px 10px;
+  font-size: 0.68rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--orange);
+}
+header .badge i { width: 8px; height: 8px; background: var(--orange); border-radius: 50%; animation: blink 2s ease infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.35} }
+header h1 { font-size: 2.4rem; font-weight: 800; color: var(--txb); margin: 16px 0 8px; letter-spacing: -0.5px; line-height:1.15; }
+header h1 em { font-style: normal; color: var(--orange); }
+header p { color: var(--tx); font-size: 0.95rem; max-width: 920px; line-height:1.65; }
+header .meta { display:flex; gap:28px; margin-top:14px; font-size:0.8rem; color: var(--tx); flex-wrap:wrap; }
+header .meta span { display:flex; align-items:center; gap:8px; }
+header .meta .dot { width:7px; height:7px; border-radius:50%; }
+
+/* ===== LAYER TABS ===== */
+.tabs {
+  display: flex; gap: 2px; padding: 22px 48px 0;
+  max-width: 1600px; margin: 0 auto;
+  flex-wrap: wrap;
+}
+.tab {
+  padding: 11px 20px; font-size: 0.74rem; font-weight: 600;
+  color: var(--tx2); cursor: pointer; border-radius: 8px 8px 0 0;
+  transition: all .2s; user-select: none; border: 1px solid transparent; border-bottom: none;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--txb); background: var(--surface); }
+.tab.on { color: var(--orange); background: var(--surface); border-color: var(--border); }
+
+/* ===== CANVAS ===== */
+.canvas {
+  max-width: 1600px; margin: 0 auto; padding: 0 48px 48px;
+}
+.layer {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0 16px 16px 16px;
+  min-height: 600px;
+  position: relative;
+  overflow: hidden;
+}
+.layer.visible { display: block; }
+
+/* ===== SVG DIAGRAM ===== */
+.diagram-wrap {
+  width: 100%; overflow-x: auto; overflow-y: hidden;
+  padding: 32px;
+}
+.diagram-wrap svg { display: block; margin: 0 auto; }
+svg text { font-family: 'Outfit', sans-serif; }
+svg .mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ===== SECTION LAYOUT ===== */
+.section-wrap { padding: 28px 32px; }
+.section-title {
+  font-size: 1.1rem; font-weight: 700; color: var(--txb); margin-bottom: 8px;
+  display:flex; align-items:center; gap:10px;
+}
+.section-title .icon { font-size:1.3rem; }
+.section-subtitle { font-size: 0.88rem; color: var(--tx); margin-bottom: 22px; max-width:860px; line-height:1.6; }
+
+/* ===== DETAIL CARDS ===== */
+.detail-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 16px; padding: 24px 32px;
+  border-top: 1px solid var(--border);
+}
+.detail-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 22px;
+}
+.detail-card h4 {
+  font-size: 0.86rem; font-weight: 700; color: var(--txb); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+.detail-card h4 .dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink:0; }
+.detail-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.82rem;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row .k { color: var(--tx); }
+.detail-row .v { font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; font-weight: 600; }
+
+/* ===== PROBLEM CARDS ===== */
+.problem-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px; padding: 0 32px 24px;
+}
+.problem-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; position:relative; overflow:hidden;
+}
+.problem-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+}
+.problem-card.stt::before { background: linear-gradient(90deg, var(--blue), var(--purple)); }
+.problem-card.llm::before { background: linear-gradient(90deg, var(--orange), var(--yellow)); }
+.problem-card.tts::before { background: linear-gradient(90deg, var(--pink), var(--accent)); }
+.problem-card.gen::before { background: linear-gradient(90deg, var(--green), var(--blue)); }
+.problem-card .num {
+  font-family:'JetBrains Mono',monospace; font-size:0.68rem; font-weight:700;
+  letter-spacing:2px; margin-bottom:8px;
+}
+.problem-card h4 { font-size:0.92rem; font-weight:700; color:var(--txb); margin-bottom:10px; }
+.problem-card p { font-size:0.82rem; color:var(--tx); line-height:1.6; }
+
+/* ===== PIPELINE STAGES ===== */
+.pipeline-wrap { padding: 24px 32px; }
+.pipeline-stage {
+  display: flex; align-items: stretch; gap: 0; margin-bottom: 20px;
+}
+.stage-num {
+  width: 52px; min-height: 100%; display: flex; align-items: center; justify-content: center;
+  font-family:'JetBrains Mono',monospace; font-size: 1.5rem; font-weight: 800;
+  border-radius: 12px 0 0 12px;
+}
+.stage-body {
+  flex: 1; background: var(--bg2); border: 1px solid var(--border);
+  border-left: none; border-radius: 0 12px 12px 0; padding: 20px 24px;
+}
+.stage-body h4 { font-size: 0.92rem; font-weight: 700; color: var(--txb); margin-bottom: 8px; }
+.stage-body p { font-size: 0.82rem; color: var(--tx); line-height: 1.6; }
+.stage-body .tag {
+  display: inline-block; padding: 3px 10px; border-radius: 5px;
+  font-family:'JetBrains Mono',monospace; font-size: 0.68rem; font-weight: 600;
+  margin-top: 10px; margin-right: 6px;
+}
+
+/* ===== KPI ROW ===== */
+.kpi-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px; padding: 22px 32px;
+  border-top: 1px solid var(--border);
+}
+.kpi {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; text-align: center;
+}
+.kpi .num { font-family:'JetBrains Mono',monospace; font-size:1.7rem; font-weight:700; }
+.kpi .lbl { font-size:0.74rem; color:var(--tx); margin-top:4px; }
+
+/* ===== LEGEND ===== */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 22px; padding: 22px 32px;
+  border-top: 1px solid var(--border);
+  font-size: 0.76rem; color: var(--tx);
+}
+.legend-item { display: flex; align-items: center; gap: 7px; }
+.legend-dot { width: 11px; height: 11px; border-radius: 3px; }
+
+/* ===== PREP DOC ===== */
+.prep-wrap { padding: 28px 32px; }
+.prep-section { margin-bottom: 28px; }
+.prep-section h3 {
+  font-size: 0.92rem; font-weight: 700; color: var(--txb); margin-bottom: 12px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  display:flex; align-items:center; gap:8px;
+}
+.prep-item {
+  padding: 10px 0 10px 18px; border-left: 2px solid var(--border);
+  margin-bottom: 6px; font-size: 0.82rem; color: var(--tx); line-height:1.6;
+}
+.prep-item strong { color: var(--txb); }
+.prep-item .time {
+  font-family:'JetBrains Mono',monospace; font-size:0.72rem; color:var(--orange);
+  display:inline-block; margin-right:10px; font-weight:600;
+}
+
+/* ===== SVG ANIMATIONS ===== */
+.stream { stroke-dasharray: 8 4; animation: dash 0.8s linear infinite; }
+@keyframes dash { to { stroke-dashoffset: -12; } }
+.fade-in { animation: fadeIn 0.6s ease both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:900px) {
+  header, .tabs, .canvas { padding-left: 16px; padding-right: 16px; }
+  header h1 { font-size: 1.6rem; }
+  .detail-grid, .problem-grid { grid-template-columns: 1fr; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .pipeline-stage { flex-direction: column; }
+  .stage-num { width: 100%; min-height: 44px; border-radius: 12px 12px 0 0; }
+  .stage-body { border-left: 1px solid var(--border); border-top: none; border-radius: 0 0 12px 12px; }
+}
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <div class="tab on" onclick="show(0)">Home</div>
+  <div class="tab" onclick="show(1)">Problem Landscape</div>
+  <div class="tab" onclick="show(2)">System Architecture</div>
+  <div class="tab" onclick="show(3)">VAD Gatekeeper</div>
+  <div class="tab" onclick="show(4)">Deaf vs Hearing</div>
+  <div class="tab" onclick="show(5)">STT Optimization</div>
+  <div class="tab" onclick="show(6)">LLM Fine-Tuning</div>
+  <div class="tab" onclick="show(7)">TTS Expressiveness</div>
+  <div class="tab" onclick="show(8)">Unified Architecture</div>
+</div>
+
+<div class="canvas">
+
+<!-- ========== TAB 0: HOME ========== -->
+<div class="layer visible" id="L0">
+<div style="display:flex;flex-direction:column;justify-content:center;min-height:560px;padding:48px 48px 32px">
+
+  <div style="margin-bottom:28px">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,238,200,0.08);border:1px solid rgba(0,238,200,0.15);border-radius:99px;padding:5px 16px 5px 10px;font-size:.72rem;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent);margin-bottom:16px"><span style="width:7px;height:7px;background:var(--accent);border-radius:50%;animation:blink 2s ease infinite"></span></div>
+    <h1 style="font-size:2.8rem;font-weight:900;color:var(--txb);letter-spacing:-1px;line-height:1.08;margin-bottom:12px">Fine&#8209;Tuning LLMs for<br><span style="color:var(--accent)">Voice&#8209;First Consumer Experiences</span></h1>
+    <p style="color:var(--tx);font-size:1rem;max-width:820px;line-height:1.6">From cascaded STT &rarr; LLM &rarr; TTS pipelines to unified Audio Language Models &mdash; optimizing every component for sub-500ms, prosodically expressive voice interactions at consumer scale.</p>
+  </div>
+
+  <div style="display:flex;gap:28px;align-items:center;padding:20px 24px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;max-width:520px">
+    <div>
+      <div style="font-size:1.15rem;font-weight:800;color:var(--txb)">Suvendu Mohanty</div>
+    </div>
+    <div style="width:1px;height:36px;background:var(--border)"></div>
+    <div>
+      <div style="font-size:.82rem;color:var(--tx2);margin-top:2px">Sr ML Engineer &amp; Voice AI Practitioners</div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- ========== TAB 1: PROBLEM LANDSCAPE ========== -->
+<div class="layer" id="L1">
+<div class="section-wrap">
+  <div class="section-title"><span class="icon">⚡</span> The Problem Landscape — Why Voice AI Feels Broken</div>
+  <div class="section-subtitle">Setting context: these are the real-world failure modes consumers experience daily. Each maps to a specific fine-tuning opportunity we address in subsequent tabs.</div>
+</div>
+
+<div class="problem-grid">
+  <div class="problem-card stt">
+    <div class="num" style="color:var(--blue)">PROBLEM 01 — STT</div>
+    <h4>The Destructive Filter</h4>
+    <p>Traditional STT acts as a lossy compression — strips sighs, rising pitch, hesitation, and emotional tone. A panicked "HELP me!" and a calm "help me" become the same text string to the LLM.</p>
+  </div>
+  <div class="problem-card stt">
+    <div class="num" style="color:var(--blue)">PROBLEM 02 — STT</div>
+    <h4>Noise Fragility</h4>
+    <p>Models trained on clean studio audio collapse in real environments — cafés, cars, wind. WER spikes 3-5× in noisy conditions. Consumer voice happens in messy acoustic spaces, not quiet labs.</p>
+  </div>
+  <div class="problem-card stt">
+    <div class="num" style="color:var(--blue)">PROBLEM 03 — STT</div>
+    <h4>Accent &amp; Speaker Diversity Gap</h4>
+    <p>Most ASR training data comes from narrow demographics. Code-switching, regional accents, non-native speakers, and elderly voices suffer disproportionately high WER — creating exclusion in consumer products.</p>
+  </div>
+  <div class="problem-card llm">
+    <div class="num" style="color:var(--orange)">PROBLEM 04 — LLM</div>
+    <h4>The "Deaf LLM" Problem</h4>
+    <p>LLMs process WHAT was said but are completely blind to HOW. Can't detect sarcasm in tone, urgency in pace, or sadness in pitch. The response to a frustrated customer sounds identical to a happy one.</p>
+  </div>
+  <div class="problem-card llm">
+    <div class="num" style="color:var(--orange)">PROBLEM 05 — LLM</div>
+    <h4>SFT Catastrophic Forgetting</h4>
+    <p>When fine-tuning LLMs for speech modality, models "forget" their text capabilities. Training on audio tasks degrades core reasoning. Joint speech-text SFT with LoRA is required to maintain both.</p>
+  </div>
+  <div class="problem-card llm">
+    <div class="num" style="color:var(--orange)">PROBLEM 06 — LLM</div>
+    <h4>Latency vs. Intelligence</h4>
+    <p>Larger models (70B+) deliver better reasoning but add 100-300ms TTFT. Human turn-taking is 500-700ms. Exceeding 1,200ms feels broken. 40%+ users abandon at &gt;1.5s. Smart-and-slow or fast-and-shallow?</p>
+  </div>
+  <div class="problem-card tts">
+    <div class="num" style="color:var(--pink)">PROBLEM 07 — TTS</div>
+    <h4>The "News Anchor" Problem</h4>
+    <p>Most TTS produces flat, uniformly professional delivery — death notifications sound like weather updates. SFT alone cannot teach emotional acting. Models need preference optimization (DPO) to learn expressiveness.</p>
+  </div>
+  <div class="problem-card tts">
+    <div class="num" style="color:var(--pink)">PROBLEM 08 — TTS</div>
+    <h4>Autoregressive Latency Tax</h4>
+    <p>Traditional TTS generates audio tokens one-by-one (left-to-right). Sequential generation adds unacceptable latency and causes repetition/hallucination artifacts at conversational pace.</p>
+  </div>
+  <div class="problem-card gen">
+    <div class="num" style="color:var(--green)">PROBLEM 09 — PIPELINE</div>
+    <h4>Cascaded Error Propagation</h4>
+    <p>Each handoff in STT→LLM→TTS compounds errors. STT misrecognition feeds wrong text to LLM; LLM responds without acoustic context; TTS synthesizes without knowing user's emotional state. Errors multiply.</p>
+  </div>
+  <div class="problem-card gen">
+    <div class="num" style="color:var(--green)">PROBLEM 10 — DATA</div>
+    <h4>Audio SFT Data Scarcity</h4>
+    <p>High-quality annotated spoken prompts with emotional context, noise variability, and intent labels are extremely scarce. Most datasets are clean studio ASR data — not representative of real consumer interactions.</p>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="num" style="color:#ff4455">3-5×</div><div class="lbl">WER spike in noisy environments</div></div>
+  <div class="kpi"><div class="num" style="color:#ff9944">40%+</div><div class="lbl">call abandon at &gt;1.5s latency</div></div>
+  <div class="kpi"><div class="num" style="color:#ffdd44">100%</div><div class="lbl">emotion lost in text-only pipe</div></div>
+  <div class="kpi"><div class="num" style="color:#5599ff">72%</div><div class="lbl">DiVA win rate vs SFT-only models</div></div>
+</div>
+</div>
+
+
+<!-- ========== TAB 2: SYSTEM ARCHITECTURE ========== -->
+<div class="layer" id="L2">
+<div class="section-wrap">
+  <div class="section-title"><span class="icon">🔊</span> Voice AI Agent — Zoomed-Out System View</div>
+  <div class="section-subtitle">The canonical cascaded architecture: User speaks → STT transcribes → LLM reasons → TTS synthesizes → User hears. Each component introduces latency and information loss that we will address in subsequent tabs.</div>
+</div>
+
+<div class="diagram-wrap">
+<svg viewBox="0 0 1240 560" width="1240" height="560" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#00eec8" opacity="0.8"/></marker>
+  <marker id="ahO" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ff9944" opacity="0.8"/></marker>
+  <marker id="ahB" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#5599ff" opacity="0.8"/></marker>
+  <marker id="ahP" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#9977ff" opacity="0.8"/></marker>
+  <marker id="ahK" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ff5599" opacity="0.8"/></marker>
+  <marker id="ahG" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#44ee88" opacity="0.8"/></marker>
+  <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <style>
+    .stream { stroke-dasharray: 8 4; animation: dash 0.8s linear infinite; }
+    @keyframes dash { to { stroke-dashoffset: -12; } }
+    .fade-in { animation: fadeIn 0.6s ease both; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .pulse { animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:0.6}50%{opacity:1} }
+  </style>
+</defs>
+
+<!-- Background grid -->
+<pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1d1d3a" stroke-width="0.5"/>
+</pattern>
+<rect width="1240" height="560" fill="url(#grid)"/>
+
+<!-- Title -->
+<rect x="30" y="16" width="1180" height="48" rx="10" fill="rgba(255,153,68,0.07)" stroke="rgba(255,153,68,0.18)" stroke-width="1"/>
+<text x="620" y="46" text-anchor="middle" font-size="15" font-weight="700" fill="#ff9944" letter-spacing="3">VOICE AI AGENT — CASCADED PIPELINE ARCHITECTURE</text>
+
+<!-- ===== USER INPUT ===== -->
+<g class="fade-in" style="animation-delay:0.1s">
+  <rect x="28" y="170" width="148" height="220" rx="14" fill="#101020" stroke="#44ee88" stroke-width="1.5"/>
+  <text x="102" y="198" text-anchor="middle" font-size="11" font-weight="700" fill="#44ee88" letter-spacing="1.5">USER INPUT</text>
+  <circle cx="102" cy="250" r="26" fill="rgba(68,238,136,0.1)" stroke="rgba(68,238,136,0.35)" stroke-width="1.2"/>
+  <text x="102" y="257" text-anchor="middle" font-size="24">🎤</text>
+  <text x="102" y="300" text-anchor="middle" font-size="10" fill="#d0d0e8">Raw Audio Signal</text>
+  <text x="102" y="316" text-anchor="middle" font-size="9" fill="#44ee88" class="mono">PCM 16kHz / Opus</text>
+  <text x="102" y="332" text-anchor="middle" font-size="9" fill="#d0d0e8">emotion · tone · pitch</text>
+  <text x="102" y="348" text-anchor="middle" font-size="9" fill="#d0d0e8">pauses · background</text>
+  <rect x="46" y="358" width="112" height="20" rx="5" fill="rgba(255,68,85,0.1)" stroke="rgba(255,68,85,0.3)" stroke-width="0.8"/>
+  <text x="102" y="372" text-anchor="middle" font-size="8" fill="#ff4455" font-weight="600">⚠ ALL LOST IN STT</text>
+</g>
+
+<!-- Arrow 1 -->
+<line x1="176" y1="280" x2="235" y2="280" stroke="#44ee88" stroke-width="2.5" class="stream" marker-end="url(#ahG)"/>
+<text x="206" y="270" text-anchor="middle" font-size="8" fill="#44ee88" class="mono" font-weight="600">audio</text>
+
+<!-- ===== STT ===== -->
+<g class="fade-in" style="animation-delay:0.2s">
+  <rect x="240" y="140" width="190" height="280" rx="14" fill="#101020" stroke="#5599ff" stroke-width="1.5"/>
+  <text x="335" y="170" text-anchor="middle" font-size="11" font-weight="700" fill="#5599ff" letter-spacing="1.5">SPEECH-TO-TEXT</text>
+  <text x="335" y="187" text-anchor="middle" font-size="9" fill="#d0d0e8">(Transcription Engine)</text>
+
+  <rect x="258" y="200" width="154" height="46" rx="8" fill="#1c1c36" stroke="#5599ff" stroke-width="1"/>
+  <text x="335" y="220" text-anchor="middle" font-size="10" font-weight="600" fill="#f0f0ff">Whisper / Parakeet</text>
+  <text x="335" y="236" text-anchor="middle" font-size="9" fill="#5599ff" class="mono">FastConformer RNN-T</text>
+
+  <rect x="258" y="256" width="154" height="40" rx="8" fill="#1c1c36" stroke="#ffdd44" stroke-width="1"/>
+  <text x="335" y="274" text-anchor="middle" font-size="10" font-weight="600" fill="#f0f0ff">VAD Endpointing</text>
+  <text x="335" y="290" text-anchor="middle" font-size="9" fill="#ffdd44" class="mono">Silero VAD · 200ms wait</text>
+
+  <rect x="258" y="306" width="154" height="40" rx="8" fill="rgba(255,68,85,0.08)" stroke="rgba(255,68,85,0.4)" stroke-width="1"/>
+  <text x="335" y="322" text-anchor="middle" font-size="10" font-weight="600" fill="#ff4455">⚠ Information Loss</text>
+  <text x="335" y="338" text-anchor="middle" font-size="9" fill="#d0d0e8">emotion, prosody stripped</text>
+
+  <text x="335" y="378" text-anchor="middle" font-size="22" font-weight="800" fill="#5599ff" class="mono">~50ms</text>
+  <text x="335" y="396" text-anchor="middle" font-size="9" fill="#d0d0e8">streaming latency</text>
+</g>
+
+<!-- Arrow 2 -->
+<line x1="430" y1="280" x2="485" y2="280" stroke="#ff9944" stroke-width="2.5" class="stream" marker-end="url(#ahO)"/>
+<text x="458" y="268" text-anchor="middle" font-size="8" fill="#ff9944" class="mono" font-weight="600">text only</text>
+<text x="458" y="294" text-anchor="middle" font-size="7" fill="#ff4455" class="pulse">emotion lost →</text>
+
+<!-- ===== LLM ===== -->
+<g class="fade-in" style="animation-delay:0.3s">
+  <rect x="490" y="120" width="260" height="320" rx="14" fill="#101020" stroke="#ff9944" stroke-width="1.5"/>
+  <text x="620" y="150" text-anchor="middle" font-size="11" font-weight="700" fill="#ff9944" letter-spacing="1.5">LLM REASONING ENGINE</text>
+
+  <rect x="510" y="168" width="220" height="52" rx="8" fill="rgba(153,119,255,0.12)" stroke="#9977ff" stroke-width="1.2"/>
+  <text x="620" y="190" text-anchor="middle" font-size="13" font-weight="700" fill="#9977ff">LLM</text>
+  <text x="620" y="210" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">Llama 3.3 70B / Qwen 2.5 · vLLM</text>
+
+  <rect x="510" y="232" width="105" height="44" rx="6" fill="#1c1c36" stroke="#ff9944" stroke-width="1"/>
+  <text x="562" y="250" text-anchor="middle" font-size="10" font-weight="600" fill="#f0f0ff">Business</text>
+  <text x="562" y="266" text-anchor="middle" font-size="9" fill="#d0d0e8">Logic</text>
+
+  <rect x="625" y="232" width="105" height="44" rx="6" fill="#1c1c36" stroke="#ff9944" stroke-width="1"/>
+  <text x="677" y="250" text-anchor="middle" font-size="10" font-weight="600" fill="#f0f0ff">Tool Calls</text>
+  <text x="677" y="266" text-anchor="middle" font-size="9" fill="#d0d0e8">APIs · DB · RAG</text>
+
+  <rect x="510" y="286" width="220" height="40" rx="6" fill="#1c1c36" stroke="#ffdd44" stroke-width="1"/>
+  <text x="620" y="304" text-anchor="middle" font-size="10" font-weight="600" fill="#f0f0ff">Context &amp; Memory</text>
+  <text x="620" y="318" text-anchor="middle" font-size="9" fill="#ffdd44" class="mono">conversation state · profile</text>
+
+  <rect x="510" y="336" width="220" height="38" rx="6" fill="rgba(255,68,85,0.08)" stroke="rgba(255,68,85,0.4)" stroke-width="1"/>
+  <text x="620" y="352" text-anchor="middle" font-size="10" font-weight="600" fill="#ff4455">⚠ "Deaf" to Emotion</text>
+  <text x="620" y="366" text-anchor="middle" font-size="9" fill="#d0d0e8">processes WHAT not HOW</text>
+
+  <text x="620" y="406" text-anchor="middle" font-size="22" font-weight="800" fill="#ff9944" class="mono">~80ms</text>
+  <text x="620" y="424" text-anchor="middle" font-size="9" fill="#d0d0e8">TTFT (Time to First Token)</text>
+</g>
+
+<!-- Arrow 3 -->
+<line x1="750" y1="280" x2="805" y2="280" stroke="#ff5599" stroke-width="2.5" class="stream" marker-end="url(#ahK)"/>
+<text x="778" y="268" text-anchor="middle" font-size="8" fill="#ff5599" class="mono" font-weight="600">text resp</text>
+
+<!-- ===== TTS ===== -->
+<g class="fade-in" style="animation-delay:0.4s">
+  <rect x="810" y="140" width="190" height="280" rx="14" fill="#101020" stroke="#ff5599" stroke-width="1.5"/>
+  <text x="905" y="170" text-anchor="middle" font-size="11" font-weight="700" fill="#ff5599" letter-spacing="1.5">TEXT-TO-SPEECH</text>
+  <text x="905" y="187" text-anchor="middle" font-size="9" fill="#d0d0e8">(Voice Synthesis)</text>
+
+  <rect x="828" y="200" width="154" height="46" rx="8" fill="#1c1c36" stroke="#ff5599" stroke-width="1"/>
+  <text x="905" y="220" text-anchor="middle" font-size="10" font-weight="600" fill="#f0f0ff">Flow Matching TTS</text>
+  <text x="905" y="236" text-anchor="middle" font-size="9" fill="#ff5599" class="mono">F5-TTS / Kokoro / F0</text>
+
+  <rect x="828" y="256" width="154" height="40" rx="8" fill="#1c1c36" stroke="#9977ff" stroke-width="1"/>
+  <text x="905" y="274" text-anchor="middle" font-size="10" font-weight="600" fill="#f0f0ff">Vocoder</text>
+  <text x="905" y="290" text-anchor="middle" font-size="9" fill="#9977ff" class="mono">BigVGAN / HiFi-GAN</text>
+
+  <rect x="828" y="306" width="154" height="40" rx="8" fill="rgba(255,68,85,0.08)" stroke="rgba(255,68,85,0.4)" stroke-width="1"/>
+  <text x="905" y="322" text-anchor="middle" font-size="10" font-weight="600" fill="#ff4455">⚠ Flat Delivery</text>
+  <text x="905" y="338" text-anchor="middle" font-size="9" fill="#d0d0e8">"news anchor" monotone</text>
+
+  <text x="905" y="378" text-anchor="middle" font-size="22" font-weight="800" fill="#ff5599" class="mono">~60ms</text>
+  <text x="905" y="396" text-anchor="middle" font-size="9" fill="#d0d0e8">first chunk latency</text>
+</g>
+
+<!-- Arrow 4 -->
+<line x1="1000" y1="280" x2="1055" y2="280" stroke="#00eec8" stroke-width="2.5" class="stream" marker-end="url(#ah)"/>
+<text x="1028" y="268" text-anchor="middle" font-size="8" fill="#00eec8" class="mono" font-weight="600">audio</text>
+
+<!-- ===== AUDIO OUTPUT ===== -->
+<g class="fade-in" style="animation-delay:0.5s">
+  <rect x="1060" y="170" width="148" height="220" rx="14" fill="#101020" stroke="#00eec8" stroke-width="1.5"/>
+  <text x="1134" y="198" text-anchor="middle" font-size="11" font-weight="700" fill="#00eec8" letter-spacing="1.5">AUDIO OUTPUT</text>
+  <circle cx="1134" cy="252" r="26" fill="rgba(0,238,200,0.1)" stroke="rgba(0,238,200,0.35)" stroke-width="1.2"/>
+  <text x="1134" y="259" text-anchor="middle" font-size="24">🔈</text>
+  <text x="1134" y="302" text-anchor="middle" font-size="10" fill="#d0d0e8">Synthesized Voice</text>
+  <text x="1134" y="318" text-anchor="middle" font-size="9" fill="#00eec8" class="mono">Opus → WebRTC</text>
+  <text x="1134" y="334" text-anchor="middle" font-size="9" fill="#d0d0e8">to user speaker</text>
+  <text x="1134" y="358" text-anchor="middle" font-size="9" fill="#d0d0e8">or meeting audio</text>
+</g>
+
+<!-- ===== TOTAL LATENCY BAR ===== -->
+<rect x="240" y="460" width="760" height="54" rx="12" fill="rgba(0,238,200,0.06)" stroke="rgba(0,238,200,0.2)" stroke-width="1"/>
+<text x="620" y="480" text-anchor="middle" font-size="11" font-weight="700" fill="#d0d0e8" letter-spacing="1">END-TO-END VOICE-TO-VOICE LATENCY</text>
+<text x="620" y="504" text-anchor="middle" font-size="26" font-weight="800" fill="#00eec8" class="mono" filter="url(#glow)">~540ms</text>
+
+<!-- Human references -->
+<rect x="30" y="466" width="180" height="42" rx="8" fill="rgba(68,238,136,0.06)" stroke="rgba(68,238,136,0.2)" stroke-width="0.8"/>
+<text x="120" y="484" text-anchor="middle" font-size="9" fill="#44ee88" font-weight="600">Human turn-taking</text>
+<text x="120" y="500" text-anchor="middle" font-size="14" font-weight="700" fill="#44ee88" class="mono">500–700ms</text>
+
+<rect x="1030" y="466" width="180" height="42" rx="8" fill="rgba(255,68,85,0.06)" stroke="rgba(255,68,85,0.2)" stroke-width="0.8"/>
+<text x="1120" y="484" text-anchor="middle" font-size="9" fill="#ff4455" font-weight="600">Perceived Slow</text>
+<text x="1120" y="500" text-anchor="middle" font-size="14" font-weight="700" fill="#ff4455" class="mono">&gt;1,200ms</text>
+
+<!-- Bottom annotations -->
+<text x="335" y="548" text-anchor="middle" font-size="8" fill="#5599ff" font-weight="700" letter-spacing="1">TAB 5: STT OPTIMIZATION →</text>
+<text x="620" y="548" text-anchor="middle" font-size="8" fill="#ff9944" font-weight="700" letter-spacing="1">TAB 6: LLM FINE-TUNING →</text>
+<text x="905" y="548" text-anchor="middle" font-size="8" fill="#ff5599" font-weight="700" letter-spacing="1">TAB 7: TTS EXPRESSIVENESS →</text>
+
+</svg>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#44ee88"></div>Audio Signal (rich)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#5599ff"></div>STT Component</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff9944"></div>LLM Reasoning</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff5599"></div>TTS Synthesis</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff4455"></div>Information Loss Points</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#00eec8"></div>Final Output</div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="num" style="color:#5599ff">50ms</div><div class="lbl">STT Streaming Latency</div></div>
+  <div class="kpi"><div class="num" style="color:#ff9944">80ms</div><div class="lbl">LLM TTFT (vLLM + FP8)</div></div>
+  <div class="kpi"><div class="num" style="color:#ff5599">60ms</div><div class="lbl">TTS First Chunk</div></div>
+  <div class="kpi"><div class="num" style="color:#ffdd44">200ms</div><div class="lbl">VAD Endpointing Wait</div></div>
+  <div class="kpi"><div class="num" style="color:#00eec8">~540ms</div><div class="lbl">Total E2E Voice-to-Voice</div></div>
+</div>
+</div>
+
+
+<!-- ========== TAB 3: VAD GATEKEEPER ========== -->
+<div class="layer" id="L3">
+<div class="section-wrap">
+  <div class="section-title"><span class="icon">🎯</span> VAD — Voice Activity Detection</div>
+  <div class="section-subtitle">"Is someone speaking right now?" — a tiny classifier on every 30ms frame that controls everything downstream. The single biggest latency lever in the entire pipeline.</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 32px 24px">
+  <div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;border-left:3px solid var(--yellow);margin-bottom:14px">
+      <h4 style="font-size:.88rem;font-weight:700;color:var(--txb);margin-bottom:10px">Architecture</h4>
+      <p style="font-size:.82rem;color:var(--tx);line-height:1.6"><strong style="color:var(--txb)">Input:</strong> Raw audio, 30ms chunks (512 samples @ 16kHz)</p>
+      <p style="font-size:.82rem;color:var(--tx);line-height:1.6"><strong style="color:var(--txb)">Model:</strong> Lightweight RNN/CNN (~1MB). CPU-only, &lt;1ms/frame.</p>
+      <p style="font-size:.82rem;color:var(--tx);line-height:1.6"><strong style="color:var(--txb)">Output:</strong> Probability 0→1 (speech confidence). Threshold ~0.5</p>
+      <p style="font-size:.82rem;color:var(--tx);line-height:1.6"><strong style="color:var(--txb)">Endpointing:</strong> 200ms silence → "turn complete" → trigger LLM</p>
+    </div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px;border-left:3px solid var(--red)">
+      <h4 style="font-size:.88rem;font-weight:700;color:var(--txb);margin-bottom:10px">Why It's the Biggest Lever</h4>
+      <p style="font-size:.82rem;color:var(--tx);line-height:1.6"><strong style="color:var(--yellow)">200ms = 37% of E2E latency.</strong> Reducing to 150ms saves 50ms but causes false turn cuts.</p>
+      <p style="font-size:.82rem;color:var(--tx);line-height:1.6;margin-top:8px"><strong style="color:var(--accent)">Modern approach:</strong> Replace acoustic VAD with <strong style="color:var(--txb)">semantic endpointing</strong> — LLM decides turn completion. Handles mid-thought pauses.</p>
+      <p style="font-size:.82rem;color:var(--tx);line-height:1.6;margin-top:8px"><strong style="color:var(--purple)">Adaptive:</strong> Different thresholds per user + environment. Noisy room ≠ quiet office.</p>
+    </div>
+  </div>
+  <div>
+    <h4 style="font-size:.88rem;font-weight:700;color:var(--yellow);margin-bottom:10px">VAD Processing Flow</h4>
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 440 270" width="440" height="270" xmlns="http://www.w3.org/2000/svg">
+    <pattern id="gv" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1d1d3a" stroke-width=".3"/></pattern>
+    <rect width="440" height="270" fill="url(#gv)"/>
+    <rect x="10" y="12" width="105" height="38" rx="8" fill="#101020" stroke="#5599ff" stroke-width="1.2"/>
+    <text x="62" y="36" text-anchor="middle" font-size="10" font-weight="600" fill="#5599ff">Audio Stream</text>
+    <line x1="115" y1="31" x2="148" y2="31" stroke="#ffdd44" stroke-width="1.5" stroke-dasharray="6 3"/>
+    <rect x="148" y="6" width="96" height="50" rx="8" fill="#101020" stroke="#ffdd44" stroke-width="1.5"/>
+    <text x="196" y="27" text-anchor="middle" font-size="11" font-weight="700" fill="#ffdd44">VAD</text>
+    <text x="196" y="43" text-anchor="middle" font-size="8.5" fill="#d0d0e8" font-family="JetBrains Mono,monospace">&lt;1ms · ~1MB</text>
+    <line x1="244" y1="22" x2="282" y2="22" stroke="#44ee88" stroke-width="1.2"/>
+    <text x="306" y="18" text-anchor="middle" font-size="8" fill="#44ee88" font-weight="600">Speech ✓</text>
+    <line x1="244" y1="42" x2="282" y2="64" stroke="#ff4455" stroke-width="1.2"/>
+    <text x="318" y="67" text-anchor="middle" font-size="8" fill="#ff4455">Noise/Silence ✗</text>
+    <line x1="328" y1="22" x2="356" y2="22" stroke="#44ee88" stroke-width="1.2"/>
+    <rect x="356" y="7" width="74" height="30" rx="6" fill="#101020" stroke="#00eec8" stroke-width="1.2"/>
+    <text x="393" y="26" text-anchor="middle" font-size="9" font-weight="600" fill="#00eec8">→ STT/LALM</text>
+    <rect x="16" y="84" width="408" height="72" rx="10" fill="#101020" stroke="#ff9944" stroke-width="1" stroke-dasharray="5 2"/>
+    <text x="220" y="104" text-anchor="middle" font-size="9" font-weight="700" fill="#ff9944">ENDPOINTING LOGIC</text>
+    <text x="220" y="122" text-anchor="middle" font-size="8.5" fill="#f0f0ff">Speech ends → wait 200ms silence → if confirmed → COMMIT → trigger LLM</text>
+    <text x="220" y="140" text-anchor="middle" font-size="9" fill="#ffdd44" font-family="JetBrains Mono,monospace" font-weight="600">This 200ms wait = biggest single latency contributor</text>
+    <rect x="16" y="176" width="408" height="76" rx="10" fill="#101020" stroke="#9977ff" stroke-width="1.2"/>
+    <text x="220" y="198" text-anchor="middle" font-size="9" font-weight="700" fill="#9977ff">SEMANTIC ENDPOINTING (2026)</text>
+    <text x="220" y="216" text-anchor="middle" font-size="8.5" fill="#f0f0ff">Instead of silence detection → LLM analyzes partial transcript</text>
+    <text x="220" y="234" text-anchor="middle" font-size="8.5" fill="#f0f0ff">"Is the user done?" — handles mid-thought pauses without cutting off</text>
+    </svg>
+    </div>
+  </div>
+</div>
+
+<div style="padding:14px 32px;font-size:.78rem;color:var(--tx);line-height:1.45;background:rgba(255,255,255,0.02);border-top:1px solid var(--border);border-left:3px solid var(--border-hi)">
+  <strong>VAD</strong> = Voice Activity Detection · <strong>Silero VAD</strong> = open-source, ~1MB, CPU-only · <strong>Semantic Endpointing</strong> = LLM-based turn detection replacing acoustic silence thresholds
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:18px 32px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center"><div style="font-family:JetBrains Mono,monospace;font-size:1.6rem;font-weight:700;color:#ffdd44">200ms</div><div style="font-size:.74rem;color:var(--tx);margin-top:4px">VAD endpointing wait</div></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center"><div style="font-family:JetBrains Mono,monospace;font-size:1.6rem;font-weight:700;color:#ff4455">37%</div><div style="font-size:.74rem;color:var(--tx);margin-top:4px">of total E2E latency</div></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center"><div style="font-family:JetBrains Mono,monospace;font-size:1.6rem;font-weight:700;color:#44ee88">&lt;1ms</div><div style="font-size:.74rem;color:var(--tx);margin-top:4px">VAD inference per frame</div></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:center"><div style="font-family:JetBrains Mono,monospace;font-size:1.6rem;font-weight:700;color:#9977ff">~1MB</div><div style="font-size:.74rem;color:var(--tx);margin-top:4px">Silero VAD model size</div></div>
+</div>
+</div>
+
+
+<!-- ========== TAB 4: DEAF vs HEARING ========== -->
+<div class="layer" id="L4">
+<div class="section-wrap">
+  <div class="section-title"><span class="icon">👂</span> Why LLMs Are "Deaf" — and What LALMs Fix</div>
+  <div class="section-subtitle">Traditional STT is a destructive filter — it strips emotion, pitch, hesitation, and urgency, passing sterile text to the LLM. LALMs bypass this entirely with dual-stream audio tokens.</div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 32px 16px">
+  <div>
+    <h4 style="font-size:.88rem;font-weight:700;color:var(--red);margin-bottom:10px">❌ Traditional LLM (Deaf)</h4>
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 440 140" width="440" height="140" xmlns="http://www.w3.org/2000/svg">
+    <rect width="440" height="140" fill="#101020" rx="10"/>
+    <text x="220" y="20" text-anchor="middle" font-size="8.5" font-weight="700" fill="#ff4455">Emotion, pitch, hesitation — ALL DESTROYED by STT</text>
+    <rect x="12" y="48" width="66" height="44" rx="7" fill="#1c1c36" stroke="#5599ff" stroke-width="1.2"/>
+    <text x="45" y="66" text-anchor="middle" font-size="16">🎙️</text>
+    <text x="45" y="84" text-anchor="middle" font-size="8" fill="#5599ff">Audio</text>
+    <line x1="78" y1="70" x2="100" y2="70" stroke="#ff4455" stroke-width="1.5"/>
+    <rect x="100" y="42" width="88" height="56" rx="7" fill="#1c1c36" stroke="#ff4455" stroke-width="1.5"/>
+    <text x="144" y="63" text-anchor="middle" font-size="9" font-weight="700" fill="#ff4455">STT</text>
+    <text x="144" y="78" text-anchor="middle" font-size="8" fill="#ff4455" font-family="JetBrains Mono,monospace">strips emotion</text>
+    <text x="144" y="90" text-anchor="middle" font-size="7.5" fill="#ff4455" font-family="JetBrains Mono,monospace">strips pitch</text>
+    <line x1="188" y1="70" x2="210" y2="70" stroke="#8888b0" stroke-width="1.5"/>
+    <rect x="210" y="52" width="78" height="36" rx="6" fill="#1c1c36" stroke="#8888b0" stroke-width="1"/>
+    <text x="249" y="68" text-anchor="middle" font-size="8.5" fill="#d0d0e8" font-family="JetBrains Mono,monospace">"can you</text>
+    <text x="249" y="80" text-anchor="middle" font-size="8.5" fill="#d0d0e8" font-family="JetBrains Mono,monospace">help me"</text>
+    <line x1="288" y1="70" x2="310" y2="70" stroke="#ff9944" stroke-width="1.5"/>
+    <rect x="310" y="48" width="66" height="44" rx="7" fill="#1c1c36" stroke="#ff9944" stroke-width="1.2"/>
+    <text x="343" y="66" text-anchor="middle" font-size="9" font-weight="700" fill="#ff9944">LLM</text>
+    <text x="343" y="84" text-anchor="middle" font-size="8" fill="#d0d0e8">text only</text>
+    <line x1="376" y1="70" x2="398" y2="70" stroke="#ff5599" stroke-width="1"/>
+    <text x="420" y="72" text-anchor="middle" font-size="18">🔊</text>
+    <text x="220" y="120" text-anchor="middle" font-size="9.5" font-weight="600" fill="#ff4455">Calm "can you help me" = Panicked "HELP me?!" → same text → same response</text>
+    </svg>
+    </div>
+  </div>
+  <div>
+    <h4 style="font-size:.88rem;font-weight:700;color:var(--accent);margin-bottom:10px">✅ LALM (Hearing)</h4>
+    <div style="overflow-x:auto">
+    <svg viewBox="0 0 440 140" width="440" height="140" xmlns="http://www.w3.org/2000/svg">
+    <rect width="440" height="140" fill="#101020" rx="10"/>
+    <text x="220" y="20" text-anchor="middle" font-size="8.5" font-weight="700" fill="#00eec8">Emotion, pitch, identity — ALL PRESERVED as acoustic tokens</text>
+    <rect x="12" y="48" width="66" height="44" rx="7" fill="#1c1c36" stroke="#5599ff" stroke-width="1.2"/>
+    <text x="45" y="66" text-anchor="middle" font-size="16">🎙️</text>
+    <text x="45" y="84" text-anchor="middle" font-size="8" fill="#5599ff">Audio</text>
+    <line x1="78" y1="58" x2="108" y2="46" stroke="#5599ff" stroke-width="1.2"/>
+    <line x1="78" y1="80" x2="108" y2="92" stroke="#ff5599" stroke-width="1.2"/>
+    <rect x="108" y="30" width="90" height="32" rx="6" fill="#1c1c36" stroke="#5599ff" stroke-width="1"/>
+    <text x="153" y="50" text-anchor="middle" font-size="8.5" font-weight="600" fill="#5599ff">Semantic Tokens</text>
+    <rect x="108" y="76" width="90" height="32" rx="6" fill="#1c1c36" stroke="#ff5599" stroke-width="1"/>
+    <text x="153" y="96" text-anchor="middle" font-size="8.5" font-weight="600" fill="#ff5599">Acoustic Tokens</text>
+    <line x1="198" y1="46" x2="240" y2="64" stroke="#5599ff" stroke-width="1"/>
+    <line x1="198" y1="92" x2="240" y2="76" stroke="#ff5599" stroke-width="1"/>
+    <rect x="240" y="44" width="100" height="52" rx="8" fill="#1c1c36" stroke="#00eec8" stroke-width="1.5"/>
+    <text x="290" y="65" text-anchor="middle" font-size="10" font-weight="700" fill="#00eec8">LALM</text>
+    <text x="290" y="82" text-anchor="middle" font-size="8" fill="#00eec8" font-family="JetBrains Mono,monospace">hears WHAT+HOW</text>
+    <line x1="340" y1="70" x2="362" y2="70" stroke="#ff5599" stroke-width="1.5"/>
+    <rect x="362" y="52" width="34" height="36" rx="5" fill="#1c1c36" stroke="#ff5599" stroke-width="1"/>
+    <text x="379" y="68" text-anchor="middle" font-size="8" fill="#ff5599" font-family="JetBrains Mono,monospace">emo</text>
+    <text x="379" y="80" text-anchor="middle" font-size="8" fill="#ff5599" font-family="JetBrains Mono,monospace">vec</text>
+    <line x1="396" y1="70" x2="412" y2="70" stroke="#44ee88" stroke-width="1"/>
+    <text x="430" y="72" text-anchor="middle" font-size="18">🔊</text>
+    <text x="220" y="124" text-anchor="middle" font-size="9.5" font-weight="600" fill="#00eec8">Panicked tone → high-arousal acoustic tokens → LLM responds with urgency</text>
+    </svg>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:0 32px 16px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;border-top:2px solid var(--blue)"><h4 style="font-size:.8rem;font-weight:700;color:var(--blue)">LLM Input</h4><p style="font-size:.82rem;color:var(--tx)">Text only</p></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;border-top:2px solid var(--accent)"><h4 style="font-size:.8rem;font-weight:700;color:var(--accent)">LALM Input</h4><p style="font-size:.82rem;color:var(--tx)">Text + Audio tokens</p></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;border-top:2px solid var(--red)"><h4 style="font-size:.8rem;font-weight:700;color:var(--red)">LLM Emotion</h4><p style="font-size:.82rem;color:var(--tx)">❌ None (deaf)</p></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;border-top:2px solid var(--green)"><h4 style="font-size:.8rem;font-weight:700;color:var(--green)">LALM Emotion</h4><p style="font-size:.82rem;color:var(--tx)">✅ Native (hearing)</p></div>
+</div>
+
+<div style="padding:14px 32px;font-size:.78rem;color:var(--tx);line-height:1.45;background:rgba(255,255,255,0.02);border-top:1px solid var(--border);border-left:3px solid var(--border-hi)">
+  <strong>LLM</strong> = Large Language Model (text→text, deaf) · <strong>LALM</strong> = Large Audio Language Model (audio→audio-aware) · <strong>Semantic Tokens</strong> = words (HuBERT) · <strong>Acoustic Tokens</strong> = emotion, pitch, identity (EnCodec)
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;padding:18px 32px">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px">
+    <h4 style="font-size:.86rem;font-weight:700;color:var(--txb);margin-bottom:10px;display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:3px;background:var(--blue)"></span>What STT Destroys</h4>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem"><span style="color:var(--tx)">Emotional tone</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#ff4455">Lost ✗</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem"><span style="color:var(--tx)">Pitch / F₀</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#ff4455">Lost ✗</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem"><span style="color:var(--tx)">Hesitation / pauses</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#ff4455">Lost ✗</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:.82rem"><span style="color:var(--tx)">Speaker identity</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#ff4455">Lost ✗</span></div>
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px">
+    <h4 style="font-size:.86rem;font-weight:700;color:var(--txb);margin-bottom:10px;display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:3px;background:var(--accent)"></span>What LALM Preserves</h4>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem"><span style="color:var(--tx)">Emotional tone</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#44ee88">Acoustic tokens ✓</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem"><span style="color:var(--tx)">Pitch / F₀</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#44ee88">EnCodec ✓</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem"><span style="color:var(--tx)">Hesitation / pauses</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#44ee88">Q-Former ✓</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:.82rem"><span style="color:var(--tx)">Speaker identity</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#44ee88">Timbre tokens ✓</span></div>
+  </div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px">
+    <h4 style="font-size:.86rem;font-weight:700;color:var(--txb);margin-bottom:10px;display:flex;align-items:center;gap:8px"><span style="width:9px;height:9px;border-radius:3px;background:var(--purple)"></span>Reference Models</h4>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem"><span style="color:var(--tx)">MinMo (~8B)</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#ff9944">Full-duplex</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem"><span style="color:var(--tx)">Qwen2-Audio</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#9977ff">SFT + DPO</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:.82rem"><span style="color:var(--tx)">DiVA</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#44ee88">Context distill</span></div>
+    <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:.82rem"><span style="color:var(--tx)">VoiceTextBlender</span><span style="font-family:JetBrains Mono,monospace;font-size:.74rem;font-weight:600;color:#00eec8">Joint SFT+LoRA</span></div>
+  </div>
+</div>
+</div>
+
+
+<!-- ========== TAB 5: STT OPTIMIZATION ========== -->
+<div class="layer" id="L5">
+<div class="section-wrap">
+  <div class="section-title"><span class="icon">👂</span> STT Optimization — From "Deaf" to "Hearing" LLMs</div>
+  <div class="section-subtitle">Moving beyond traditional speech-to-text to preserve full acoustic richness of human speech. The goal: make the LLM hear emotion, not just words.</div>
+</div>
+
+<!-- STT Architecture Diagram -->
+<div class="diagram-wrap">
+<svg viewBox="0 0 1100 380" width="1100" height="380" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ahS" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#5599ff" opacity="0.8"/></marker>
+  <marker id="ahSp" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#9977ff" opacity="0.8"/></marker>
+  <marker id="ahSo" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#ff9944" opacity="0.8"/></marker>
+  <marker id="ahSg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#44ee88" opacity="0.8"/></marker>
+</defs>
+<pattern id="grid3" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1d1d3a" stroke-width="0.5"/></pattern>
+<rect width="1100" height="380" fill="url(#grid3)"/>
+
+<text x="550" y="28" text-anchor="middle" font-size="13" font-weight="700" fill="#5599ff" letter-spacing="2">DUAL-ADAPTER AUDIO INTERFACE — TWO-STREAM TOKENIZATION</text>
+
+<!-- Raw Audio -->
+<rect x="20" y="120" width="120" height="140" rx="10" fill="#101020" stroke="#44ee88" stroke-width="1.5"/>
+<text x="80" y="148" text-anchor="middle" font-size="10" font-weight="700" fill="#44ee88">RAW AUDIO</text>
+<text x="80" y="180" text-anchor="middle" font-size="20">🎤</text>
+<text x="80" y="210" text-anchor="middle" font-size="8" fill="#d0d0e8" class="mono">PCM 16kHz</text>
+<text x="80" y="226" text-anchor="middle" font-size="8" fill="#d0d0e8">+ emotion</text>
+<text x="80" y="240" text-anchor="middle" font-size="8" fill="#d0d0e8">+ prosody</text>
+
+<!-- Frozen Audio Encoder -->
+<rect x="180" y="90" width="160" height="200" rx="12" fill="#101020" stroke="#5599ff" stroke-width="1.5"/>
+<text x="260" y="115" text-anchor="middle" font-size="10" font-weight="700" fill="#5599ff">AUDIO ENCODER</text>
+<text x="260" y="130" text-anchor="middle" font-size="8" fill="#d0d0e8" class="mono">WavLM / Conformer</text>
+<rect x="196" y="140" width="128" height="24" rx="5" fill="rgba(85,153,255,0.12)" stroke="rgba(85,153,255,0.3)" stroke-width="0.8"/>
+<text x="260" y="156" text-anchor="middle" font-size="8" fill="#5599ff" font-weight="600">🔒 FROZEN weights</text>
+
+<!-- Semantic Adapter -->
+<rect x="200" y="176" width="120" height="44" rx="6" fill="#1c1c36" stroke="#5599ff" stroke-width="1"/>
+<text x="260" y="194" text-anchor="middle" font-size="9" font-weight="600" fill="#f0f0ff">Semantic Adapter</text>
+<text x="260" y="210" text-anchor="middle" font-size="8" fill="#5599ff" class="mono">Conv subsample 50→12.5Hz</text>
+
+<!-- Acoustic Adapter -->
+<rect x="200" y="228" width="120" height="44" rx="6" fill="#1c1c36" stroke="#9977ff" stroke-width="1"/>
+<text x="260" y="246" text-anchor="middle" font-size="9" font-weight="600" fill="#f0f0ff">Acoustic Q-Former</text>
+<text x="260" y="262" text-anchor="middle" font-size="8" fill="#9977ff" class="mono">Trainable queries</text>
+
+<!-- Arrow: Audio → Encoder -->
+<line x1="140" y1="190" x2="178" y2="190" stroke="#44ee88" stroke-width="2" class="stream" marker-end="url(#ahSg)"/>
+
+<!-- Two-Stream Tokens -->
+<rect x="390" y="100" width="160" height="80" rx="10" fill="#101020" stroke="#5599ff" stroke-width="1.5"/>
+<text x="470" y="122" text-anchor="middle" font-size="10" font-weight="700" fill="#5599ff">SEMANTIC TOKENS</text>
+<text x="470" y="140" text-anchor="middle" font-size="9" fill="#d0d0e8">HuBERT extraction</text>
+<text x="470" y="156" text-anchor="middle" font-size="9" fill="#5599ff" class="mono">WHAT is said</text>
+<text x="470" y="170" text-anchor="middle" font-size="8" fill="#d0d0e8">words · phonemes</text>
+
+<rect x="390" y="200" width="160" height="80" rx="10" fill="#101020" stroke="#9977ff" stroke-width="1.5"/>
+<text x="470" y="222" text-anchor="middle" font-size="10" font-weight="700" fill="#9977ff">ACOUSTIC TOKENS</text>
+<text x="470" y="240" text-anchor="middle" font-size="9" fill="#d0d0e8">EnCodec / Mimi extraction</text>
+<text x="470" y="256" text-anchor="middle" font-size="9" fill="#9977ff" class="mono">HOW it's said</text>
+<text x="470" y="270" text-anchor="middle" font-size="8" fill="#d0d0e8">pitch · tone · F₀ · identity</text>
+
+<!-- Arrows: Adapter → Tokens -->
+<line x1="320" y1="198" x2="388" y2="140" stroke="#5599ff" stroke-width="1.5" class="stream" marker-end="url(#ahS)"/>
+<line x1="320" y1="250" x2="388" y2="240" stroke="#9977ff" stroke-width="1.5" class="stream" marker-end="url(#ahSp)"/>
+
+<!-- Interleaved Context -->
+<rect x="600" y="120" width="180" height="140" rx="12" fill="#101020" stroke="#ff9944" stroke-width="1.5"/>
+<text x="690" y="148" text-anchor="middle" font-size="10" font-weight="700" fill="#ff9944">INTERLEAVED</text>
+<text x="690" y="164" text-anchor="middle" font-size="10" font-weight="700" fill="#ff9944">CONTEXT WINDOW</text>
+
+<!-- Token visualization -->
+<rect x="618" y="178" width="40" height="18" rx="3" fill="rgba(85,153,255,0.2)" stroke="#5599ff" stroke-width="0.8"/>
+<text x="638" y="191" text-anchor="middle" font-size="7" fill="#5599ff" class="mono">SEM</text>
+<rect x="662" y="178" width="40" height="18" rx="3" fill="rgba(153,119,255,0.2)" stroke="#9977ff" stroke-width="0.8"/>
+<text x="682" y="191" text-anchor="middle" font-size="7" fill="#9977ff" class="mono">ACO</text>
+<rect x="706" y="178" width="40" height="18" rx="3" fill="rgba(85,153,255,0.2)" stroke="#5599ff" stroke-width="0.8"/>
+<text x="726" y="191" text-anchor="middle" font-size="7" fill="#5599ff" class="mono">SEM</text>
+
+<rect x="618" y="202" width="40" height="18" rx="3" fill="rgba(153,119,255,0.2)" stroke="#9977ff" stroke-width="0.8"/>
+<text x="638" y="215" text-anchor="middle" font-size="7" fill="#9977ff" class="mono">ACO</text>
+<rect x="662" y="202" width="40" height="18" rx="3" fill="rgba(85,153,255,0.2)" stroke="#5599ff" stroke-width="0.8"/>
+<text x="682" y="215" text-anchor="middle" font-size="7" fill="#5599ff" class="mono">SEM</text>
+<rect x="706" y="202" width="40" height="18" rx="3" fill="rgba(153,119,255,0.2)" stroke="#9977ff" stroke-width="0.8"/>
+<text x="726" y="215" text-anchor="middle" font-size="7" fill="#9977ff" class="mono">ACO</text>
+
+<text x="690" y="244" text-anchor="middle" font-size="8" fill="#d0d0e8">Both streams feed</text>
+<text x="690" y="256" text-anchor="middle" font-size="8" fill="#d0d0e8">into LLM jointly</text>
+
+<!-- Arrows: Tokens → Context -->
+<line x1="550" y1="140" x2="598" y2="170" stroke="#5599ff" stroke-width="1.5" class="stream" marker-end="url(#ahS)"/>
+<line x1="550" y1="240" x2="598" y2="210" stroke="#9977ff" stroke-width="1.5" class="stream" marker-end="url(#ahSp)"/>
+
+<!-- LLM box -->
+<rect x="830" y="130" width="240" height="120" rx="14" fill="#101020" stroke="#ff9944" stroke-width="1.5"/>
+<text x="950" y="158" text-anchor="middle" font-size="12" font-weight="800" fill="#ff9944">LLM</text>
+<text x="950" y="176" text-anchor="middle" font-size="9" fill="#d0d0e8">Now understands:</text>
+<text x="950" y="196" text-anchor="middle" font-size="10" fill="#5599ff" font-weight="600">WHAT was said (semantic)</text>
+<text x="950" y="214" text-anchor="middle" font-size="10" fill="#5599ff" font-weight="600">+</text>
+<text x="950" y="232" text-anchor="middle" font-size="10" fill="#9977ff" font-weight="600">HOW it was said (acoustic)</text>
+
+<!-- Arrow: Context → LLM -->
+<line x1="780" y1="190" x2="828" y2="190" stroke="#ff9944" stroke-width="2" class="stream" marker-end="url(#ahSo)"/>
+
+<!-- Bottom label -->
+<rect x="300" y="320" width="500" height="40" rx="10" fill="rgba(0,238,200,0.06)" stroke="rgba(0,238,200,0.2)" stroke-width="1"/>
+<text x="550" y="340" text-anchor="middle" font-size="10" font-weight="600" fill="#d0d0e8">Key insight: interleaving acoustic + semantic tokens teaches the model that</text>
+<text x="550" y="354" text-anchor="middle" font-size="10" font-weight="700" fill="#00eec8">HOW a word is spoken changes the meaning of WHAT is spoken</text>
+
+</svg>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#5599ff"></span>Streaming ASR Model Comparison</h4>
+    <div class="detail-row"><span class="k">Whisper Large v3</span><span class="v" style="color:#ffdd44">Best WER, non-streaming</span></div>
+    <div class="detail-row"><span class="k">Parakeet CTC 1.1B</span><span class="v" style="color:#44ee88">Streaming ✓ · WER 3.02</span></div>
+    <div class="detail-row"><span class="k">FastConformer RNN-T</span><span class="v" style="color:#00eec8">50ms latency · streaming ✓</span></div>
+    <div class="detail-row"><span class="k">Canary 1.8B</span><span class="v" style="color:#9977ff">Multilingual · 30+ langs</span></div>
+  </div>
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#ff9944"></span>Audio SFT Data Requirements</h4>
+    <div class="detail-row"><span class="k">Script packs / week</span><span class="v" style="color:#ff9944">1,000+ scenario-specific</span></div>
+    <div class="detail-row"><span class="k">Noise injection</span><span class="v" style="color:#ffdd44">Café, traffic, wind, echo</span></div>
+    <div class="detail-row"><span class="k">Emotion coverage</span><span class="v" style="color:#ff5599">frustrated, urgent, calm, sad</span></div>
+    <div class="detail-row"><span class="k">Accent diversity</span><span class="v" style="color:#44ee88">50+ languages, regional</span></div>
+  </div>
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#44ee88"></span>RL vs SFT for Audio Understanding</h4>
+    <div class="detail-row"><span class="k">GRPO on Qwen2-Audio</span><span class="v" style="color:#00eec8">64.5% MMAU (SOTA)</span></div>
+    <div class="detail-row"><span class="k">SFT-only baseline</span><span class="v" style="color:#ff4455">significantly lower</span></div>
+    <div class="detail-row"><span class="k">Training samples</span><span class="v" style="color:#ffdd44">only 38K for RL</span></div>
+    <div class="detail-row"><span class="k">Key finding</span><span class="v" style="color:#44ee88">RL &gt; SFT for audio</span></div>
+  </div>
+</div>
+</div>
+
+
+<!-- ========== TAB 6: LLM FINE-TUNING ========== -->
+<div class="layer" id="L6">
+<div class="section-wrap">
+  <div class="section-title"><span class="icon">🧠</span> LLM Fine-Tuning — Three-Stage Audio-Aware Curriculum</div>
+  <div class="section-subtitle">Training the LLM to understand not just words, but the full emotional and acoustic context of human speech through a progressive curriculum.</div>
+</div>
+
+<!-- LLM Training Pipeline Diagram -->
+<div class="diagram-wrap">
+<svg viewBox="0 0 1100 300" width="1100" height="300" xmlns="http://www.w3.org/2000/svg">
+<pattern id="grid4" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1d1d3a" stroke-width="0.5"/></pattern>
+<rect width="1100" height="300" fill="url(#grid4)"/>
+<defs>
+  <marker id="ahL" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#d0d0e8" opacity="0.6"/></marker>
+</defs>
+
+<text x="550" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#ff9944" letter-spacing="2">THREE-STAGE LLM FINE-TUNING CURRICULUM</text>
+
+<!-- Stage 1 -->
+<rect x="20" y="52" width="330" height="200" rx="14" fill="#101020" stroke="#5599ff" stroke-width="1.5"/>
+<rect x="20" y="52" width="330" height="36" rx="14" fill="rgba(85,153,255,0.12)"/>
+<rect x="20" y="74" width="330" height="14" fill="rgba(85,153,255,0.12)"/>
+<text x="185" y="75" text-anchor="middle" font-size="12" font-weight="800" fill="#5599ff">STAGE 1: Cross-Modal Alignment</text>
+
+<text x="40" y="108" font-size="9" fill="#d0d0e8" font-weight="600">🔒 LLM: Frozen</text>
+<text x="40" y="124" font-size="9" fill="#d0d0e8" font-weight="600">🔒 Audio Encoder: Frozen</text>
+<text x="40" y="140" font-size="9" fill="#5599ff" font-weight="600">🔓 LoRA Adapter: TRAINING</text>
+<text x="40" y="164" font-size="9" fill="#d0d0e8">Task: ASR as proxy</text>
+<text x="40" y="180" font-size="9" fill="#d0d0e8">Goal: Map audio tokens →</text>
+<text x="40" y="196" font-size="9" fill="#d0d0e8">LLM text-embedding space</text>
+
+<rect x="40" y="210" width="290" height="28" rx="6" fill="rgba(85,153,255,0.1)" stroke="rgba(85,153,255,0.3)" stroke-width="0.8"/>
+<text x="185" y="229" text-anchor="middle" font-size="9" fill="#5599ff" font-weight="600" class="mono">LoRA r=16 · ~1% params updated</text>
+
+<!-- Arrow 1→2 -->
+<line x1="350" y1="152" x2="384" y2="152" stroke="#d0d0e8" stroke-width="2" marker-end="url(#ahL)"/>
+
+<!-- Stage 2 -->
+<rect x="388" y="52" width="330" height="200" rx="14" fill="#101020" stroke="#ff9944" stroke-width="1.5"/>
+<rect x="388" y="52" width="330" height="36" rx="14" fill="rgba(255,153,68,0.12)"/>
+<rect x="388" y="74" width="330" height="14" fill="rgba(255,153,68,0.12)"/>
+<text x="553" y="75" text-anchor="middle" font-size="12" font-weight="800" fill="#ff9944">STAGE 2: Soft Label Emotion SFT</text>
+
+<text x="408" y="108" font-size="9" fill="#d0d0e8" font-weight="600">Teacher LLM generates soft labels</text>
+<text x="408" y="128" font-size="9" fill="#d0d0e8">NOT hard labels like [ANGRY]</text>
+<text x="408" y="148" font-size="9" fill="#ff9944" font-weight="600">→ Probability distribution:</text>
+<text x="418" y="168" font-size="9" fill="#d0d0e8" class="mono">frustrated: 0.70</text>
+<text x="418" y="184" font-size="9" fill="#d0d0e8" class="mono">urgent:     0.25</text>
+<text x="418" y="200" font-size="9" fill="#d0d0e8" class="mono">neutral:    0.05</text>
+
+<rect x="408" y="210" width="290" height="28" rx="6" fill="rgba(255,153,68,0.1)" stroke="rgba(255,153,68,0.3)" stroke-width="0.8"/>
+<text x="553" y="229" text-anchor="middle" font-size="9" fill="#ff9944" font-weight="600" class="mono">Catches subtle emotional cues</text>
+
+<!-- Arrow 2→3 -->
+<line x1="718" y1="152" x2="752" y2="152" stroke="#d0d0e8" stroke-width="2" marker-end="url(#ahL)"/>
+
+<!-- Stage 3 -->
+<rect x="756" y="52" width="330" height="200" rx="14" fill="#101020" stroke="#00eec8" stroke-width="1.5"/>
+<rect x="756" y="52" width="330" height="36" rx="14" fill="rgba(0,238,200,0.12)"/>
+<rect x="756" y="74" width="330" height="14" fill="rgba(0,238,200,0.12)"/>
+<text x="921" y="75" text-anchor="middle" font-size="12" font-weight="800" fill="#00eec8">STAGE 3: GRPO (Reinforcement)</text>
+
+<text x="776" y="108" font-size="9" fill="#d0d0e8" font-weight="600">Model-as-a-Judge scoring:</text>
+<text x="786" y="128" font-size="9" fill="#d0d0e8">• Prosodic accuracy</text>
+<text x="786" y="144" font-size="9" fill="#d0d0e8">• Emotional alignment</text>
+<text x="786" y="160" font-size="9" fill="#d0d0e8">• Natural pausing</text>
+<text x="776" y="184" font-size="9" fill="#00eec8" font-weight="700">KEY RESULT:</text>
+<text x="776" y="200" font-size="9" fill="#d0d0e8">38K GRPO samples beat millions of SFT</text>
+
+<rect x="776" y="210" width="290" height="28" rx="6" fill="rgba(0,238,200,0.1)" stroke="rgba(0,238,200,0.3)" stroke-width="0.8"/>
+<text x="921" y="229" text-anchor="middle" font-size="9" fill="#00eec8" font-weight="600" class="mono">64.5% MMAU accuracy (SOTA)</text>
+
+<!-- Bottom: alternative approach -->
+<rect x="250" y="270" width="600" height="24" rx="6" fill="rgba(153,119,255,0.08)" stroke="rgba(153,119,255,0.2)" stroke-width="0.8"/>
+<text x="550" y="286" text-anchor="middle" font-size="9" fill="#9977ff" font-weight="600">Alternative: DiVA Context Distillation — 72% win rate vs Qwen2-Audio using only ASR data (no instruction data)</text>
+
+</svg>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#ff9944"></span>Avoiding Catastrophic Forgetting</h4>
+    <div class="detail-row"><span class="k">Problem</span><span class="v" style="color:#ff4455">Audio SFT kills text perf</span></div>
+    <div class="detail-row"><span class="k">VoiceTextBlender (3B)</span><span class="v" style="color:#44ee88">Joint speech-text SFT</span></div>
+    <div class="detail-row"><span class="k">Method</span><span class="v" style="color:#00eec8">LoRA on both modalities</span></div>
+    <div class="detail-row"><span class="k">Result</span><span class="v" style="color:#ffdd44">Maintains text + gains speech</span></div>
+  </div>
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#9977ff"></span>Context Distillation (DiVA)</h4>
+    <div class="detail-row"><span class="k">Core idea</span><span class="v" style="color:#9977ff">Distill text → audio modality</span></div>
+    <div class="detail-row"><span class="k">Training data</span><span class="v" style="color:#44ee88">Only ASR data needed</span></div>
+    <div class="detail-row"><span class="k">No instruction data</span><span class="v" style="color:#ffdd44">Self-supervised transfer</span></div>
+    <div class="detail-row"><span class="k">Win rate vs Qwen2-Audio</span><span class="v" style="color:#00eec8">72% user preference</span></div>
+  </div>
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#00eec8"></span>Multimodal Voice Aggregation</h4>
+    <div class="detail-row"><span class="k">Input</span><span class="v" style="color:#5599ff">User acoustic tokens</span></div>
+    <div class="detail-row"><span class="k">Intermediate</span><span class="v" style="color:#ff9944">Contextual Emotion Embed</span></div>
+    <div class="detail-row"><span class="k">LLM processes</span><span class="v" style="color:#9977ff">WHAT + HOW jointly</span></div>
+    <div class="detail-row"><span class="k">Output</span><span class="v" style="color:#00eec8">Emotion vector + semantic text</span></div>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="num" style="color:#00eec8">64.5%</div><div class="lbl">GRPO MMAU accuracy (SOTA)</div></div>
+  <div class="kpi"><div class="num" style="color:#ff9944">38K</div><div class="lbl">samples beat millions of SFT</div></div>
+  <div class="kpi"><div class="num" style="color:#9977ff">72%</div><div class="lbl">DiVA preference win rate</div></div>
+  <div class="kpi"><div class="num" style="color:#44ee88">~1%</div><div class="lbl">params updated (LoRA)</div></div>
+</div>
+</div>
+
+
+<!-- ========== TAB 7: TTS EXPRESSIVENESS ========== -->
+<div class="layer" id="L7">
+<div class="section-wrap">
+  <div class="section-title"><span class="icon">🎭</span> TTS Optimization — Expressive Voice Synthesis</div>
+  <div class="section-subtitle">From flat "news anchor" delivery to emotionally dynamic speech using Conditional Flow Matching (CFM), emotion disentanglement, and preference optimization (Emo-DPO).</div>
+</div>
+
+<!-- TTS Architecture Diagram -->
+<div class="diagram-wrap">
+<svg viewBox="0 0 1100 340" width="1100" height="340" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ahT" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#ff5599" opacity="0.8"/></marker>
+  <marker id="ahTg" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto"><polygon points="0 0, 7 2.5, 0 5" fill="#44ee88" opacity="0.8"/></marker>
+</defs>
+<pattern id="grid5" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1d1d3a" stroke-width="0.5"/></pattern>
+<rect width="1100" height="340" fill="url(#grid5)"/>
+
+<text x="550" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#ff5599" letter-spacing="2">THREE-STREAM EMOTION DISENTANGLEMENT → FLOW MATCHING SYNTHESIS</text>
+
+<!-- LLM Output -->
+<rect x="20" y="80" width="130" height="180" rx="12" fill="#101020" stroke="#ff9944" stroke-width="1.5"/>
+<text x="85" y="108" text-anchor="middle" font-size="10" font-weight="700" fill="#ff9944">LLM OUTPUT</text>
+<text x="85" y="140" text-anchor="middle" font-size="9" fill="#d0d0e8">Text response</text>
+<text x="85" y="158" text-anchor="middle" font-size="9" fill="#d0d0e8">+</text>
+<text x="85" y="176" text-anchor="middle" font-size="9" fill="#9977ff">Emotion vector</text>
+<text x="85" y="194" text-anchor="middle" font-size="9" fill="#d0d0e8">(AVD values)</text>
+<text x="85" y="230" text-anchor="middle" font-size="8" fill="#d0d0e8" class="mono">arousal: 0.8</text>
+<text x="85" y="244" text-anchor="middle" font-size="8" fill="#d0d0e8" class="mono">valence: -0.3</text>
+
+<!-- Three Streams -->
+<rect x="200" y="52" width="160" height="60" rx="8" fill="#101020" stroke="#5599ff" stroke-width="1.2"/>
+<text x="280" y="76" text-anchor="middle" font-size="10" font-weight="700" fill="#5599ff">Stream 1: Semantic</text>
+<text x="280" y="96" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">words · phonemes · content</text>
+
+<rect x="200" y="132" width="160" height="60" rx="8" fill="#101020" stroke="#ff9944" stroke-width="1.2"/>
+<text x="280" y="156" text-anchor="middle" font-size="10" font-weight="700" fill="#ff9944">Stream 2: Timbre</text>
+<text x="280" y="176" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">speaker identity · voice</text>
+
+<rect x="200" y="212" width="160" height="60" rx="8" fill="#101020" stroke="#9977ff" stroke-width="1.2"/>
+<text x="280" y="236" text-anchor="middle" font-size="10" font-weight="700" fill="#9977ff">Stream 3: AVD Vectors</text>
+<text x="280" y="256" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">arousal · valence · dominance</text>
+
+<!-- Arrows to streams -->
+<line x1="150" y1="130" x2="198" y2="82" stroke="#5599ff" stroke-width="1.5" marker-end="url(#ahS)"/>
+<line x1="150" y1="170" x2="198" y2="162" stroke="#ff9944" stroke-width="1.5" marker-end="url(#ahSo)"/>
+<line x1="150" y1="210" x2="198" y2="242" stroke="#9977ff" stroke-width="1.5" marker-end="url(#ahSp)"/>
+
+<!-- Flow Matching Engine -->
+<rect x="420" y="70" width="240" height="220" rx="14" fill="#101020" stroke="#ff5599" stroke-width="2"/>
+<text x="540" y="100" text-anchor="middle" font-size="12" font-weight="800" fill="#ff5599">FLOW MATCHING (CFM)</text>
+<text x="540" y="116" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">Diffusion Transformer (DiT)</text>
+
+<text x="540" y="146" text-anchor="middle" font-size="9" fill="#d0d0e8">Noise → Mel-spectrogram</text>
+<text x="540" y="162" text-anchor="middle" font-size="9" fill="#ff5599" font-weight="600">in PARALLEL (not sequential)</text>
+
+<rect x="440" y="180" width="200" height="30" rx="6" fill="rgba(255,85,153,0.1)" stroke="rgba(255,85,153,0.3)" stroke-width="0.8"/>
+<text x="540" y="200" text-anchor="middle" font-size="9" fill="#ff5599" font-weight="600" class="mono">2.8× to 25× faster than diffusion</text>
+
+<rect x="440" y="220" width="200" height="30" rx="6" fill="rgba(0,238,200,0.1)" stroke="rgba(0,238,200,0.3)" stroke-width="0.8"/>
+<text x="540" y="240" text-anchor="middle" font-size="9" fill="#00eec8" font-weight="600" class="mono">Sub-200ms latency</text>
+
+<text x="540" y="274" text-anchor="middle" font-size="9" fill="#d0d0e8">Conditioned on all 3 streams</text>
+
+<!-- Arrows: Streams → CFM -->
+<line x1="360" y1="82" x2="418" y2="140" stroke="#5599ff" stroke-width="1.5" class="stream" marker-end="url(#ahT)"/>
+<line x1="360" y1="162" x2="418" y2="170" stroke="#ff9944" stroke-width="1.5" class="stream" marker-end="url(#ahT)"/>
+<line x1="360" y1="242" x2="418" y2="210" stroke="#9977ff" stroke-width="1.5" class="stream" marker-end="url(#ahT)"/>
+
+<!-- Vocoder -->
+<rect x="720" y="110" width="150" height="140" rx="12" fill="#101020" stroke="#44ee88" stroke-width="1.5"/>
+<text x="795" y="138" text-anchor="middle" font-size="10" font-weight="700" fill="#44ee88">VOCODER</text>
+<text x="795" y="160" text-anchor="middle" font-size="9" fill="#d0d0e8">Mel → Waveform</text>
+<text x="795" y="186" text-anchor="middle" font-size="9" fill="#44ee88" class="mono">BigVGAN v2</text>
+<text x="795" y="202" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">or HiFi-GAN</text>
+<text x="795" y="230" text-anchor="middle" font-size="9" fill="#d0d0e8">24kHz / 48kHz output</text>
+
+<!-- Arrow: CFM → Vocoder -->
+<line x1="660" y1="180" x2="718" y2="180" stroke="#44ee88" stroke-width="2" class="stream" marker-end="url(#ahTg)"/>
+
+<!-- Output -->
+<rect x="930" y="130" width="140" height="100" rx="12" fill="#101020" stroke="#00eec8" stroke-width="1.5"/>
+<text x="1000" y="158" text-anchor="middle" font-size="22">🔊</text>
+<text x="1000" y="186" text-anchor="middle" font-size="10" font-weight="700" fill="#00eec8">Expressive Audio</text>
+<text x="1000" y="204" text-anchor="middle" font-size="9" fill="#d0d0e8">Dynamic prosody</text>
+<text x="1000" y="218" text-anchor="middle" font-size="9" fill="#d0d0e8">Intra-utterance shifts</text>
+
+<!-- Arrow: Vocoder → Output -->
+<line x1="870" y1="180" x2="928" y2="180" stroke="#00eec8" stroke-width="2" class="stream" marker-end="url(#ah)"/>
+
+<!-- Emo-DPO box bottom -->
+<rect x="340" y="304" width="420" height="28" rx="8" fill="rgba(255,221,68,0.08)" stroke="rgba(255,221,68,0.25)" stroke-width="1"/>
+<text x="550" y="322" text-anchor="middle" font-size="9" fill="#ffdd44" font-weight="600">Emo-DPO: Model-as-a-Judge scores on emotional alignment → DPO optimizes away from flat delivery</text>
+
+</svg>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#ff5599"></span>TTS Model Landscape (2026)</h4>
+    <div class="detail-row"><span class="k">F5-TTS</span><span class="v" style="color:#ff5599">CFM + DiT · zero-shot</span></div>
+    <div class="detail-row"><span class="k">StyleTTS 2</span><span class="v" style="color:#9977ff">Style diffusion · SLM guided</span></div>
+    <div class="detail-row"><span class="k">NaturalSpeech 3</span><span class="v" style="color:#44ee88">Factorized codec · FACodec</span></div>
+    <div class="detail-row"><span class="k">CosyVoice / Orpheus</span><span class="v" style="color:#ffdd44">LLM-native speech tokens</span></div>
+    <div class="detail-row"><span class="k">Kokoro-82M</span><span class="v" style="color:#00eec8">40-70ms · 210× realtime</span></div>
+  </div>
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#ffdd44"></span>Speed: CFM vs. Autoregressive</h4>
+    <div class="detail-row"><span class="k">AR decoding (VALL-E)</span><span class="v" style="color:#ff4455">300-800ms first chunk</span></div>
+    <div class="detail-row"><span class="k">Multi-step diffusion</span><span class="v" style="color:#ff9944">100-200ms + hallucination</span></div>
+    <div class="detail-row"><span class="k">Flow Matching (1-step)</span><span class="v" style="color:#44ee88">40-80ms · parallel</span></div>
+    <div class="detail-row"><span class="k">Speedup vs. diffusion</span><span class="v" style="color:#00eec8">2.8× to 25× faster</span></div>
+  </div>
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#00eec8"></span>Emo-DPO Fine-Tuning</h4>
+    <div class="detail-row"><span class="k">Step 1</span><span class="v" style="color:#d0d0e8">Generate 2 audio per prompt</span></div>
+    <div class="detail-row"><span class="k">Step 2</span><span class="v" style="color:#ffdd44">LALM judge scores emotion</span></div>
+    <div class="detail-row"><span class="k">Step 3</span><span class="v" style="color:#9977ff">Create preference dataset</span></div>
+    <div class="detail-row"><span class="k">Step 4</span><span class="v" style="color:#00eec8">DPO → expressive outputs</span></div>
+  </div>
+</div>
+</div>
+
+
+<!-- ========== TAB 8: UNIFIED ARCHITECTURE ========== -->
+<div class="layer" id="L8">
+<div class="section-wrap">
+  <div class="section-title"><span class="icon">🔄</span> The Unified Architecture — Closing the Loop</div>
+  <div class="section-subtitle">Moving from a linear cascaded pipeline to a continuous emotion-aware loop: the "Hearing LLM" that processes acoustic + semantic tokens natively.</div>
+</div>
+
+<div class="diagram-wrap">
+<svg viewBox="0 0 1060 500" width="1060" height="500" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ahU" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#00eec8" opacity="0.8"/></marker>
+  <marker id="ahUo" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ff9944" opacity="0.8"/></marker>
+  <marker id="ahUp" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#9977ff" opacity="0.8"/></marker>
+  <marker id="ahUk" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#ff5599" opacity="0.8"/></marker>
+</defs>
+<pattern id="grid6" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1d1d3a" stroke-width="0.5"/></pattern>
+<rect width="1060" height="500" fill="url(#grid6)"/>
+
+<text x="530" y="30" text-anchor="middle" font-size="14" font-weight="700" fill="#00eec8" letter-spacing="2">UNIFIED SPEECH-LLM — CONTINUOUS EMOTION LOOP</text>
+<text x="530" y="50" text-anchor="middle" font-size="10" fill="#d0d0e8">Replacing cascaded STT→LLM→TTS with a single end-to-end Audio Language Model</text>
+
+<!-- User -->
+<circle cx="100" cy="250" r="52" fill="rgba(68,238,136,0.07)" stroke="rgba(68,238,136,0.35)" stroke-width="1.5"/>
+<text x="100" y="240" text-anchor="middle" font-size="30">🗣️</text>
+<text x="100" y="268" text-anchor="middle" font-size="10" font-weight="600" fill="#44ee88">User</text>
+<text x="100" y="320" text-anchor="middle" font-size="9" fill="#d0d0e8">Raw audio with</text>
+<text x="100" y="336" text-anchor="middle" font-size="9" fill="#d0d0e8">emotion · prosody · tone</text>
+
+<!-- Audio Encoder -->
+<rect x="195" y="160" width="150" height="180" rx="12" fill="#101020" stroke="#5599ff" stroke-width="1.5"/>
+<text x="270" y="188" text-anchor="middle" font-size="10" font-weight="700" fill="#5599ff">AUDIO ENCODER</text>
+<text x="270" y="206" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">WavLM / Conformer</text>
+<rect x="207" y="218" width="126" height="26" rx="5" fill="#1c1c36" stroke="#5599ff" stroke-width="0.8"/>
+<text x="270" y="235" text-anchor="middle" font-size="9" fill="#5599ff" font-weight="600">Semantic Adapter</text>
+<rect x="207" y="252" width="126" height="26" rx="5" fill="#1c1c36" stroke="#9977ff" stroke-width="0.8"/>
+<text x="270" y="269" text-anchor="middle" font-size="9" fill="#9977ff" font-weight="600">Acoustic Q-Former</text>
+<rect x="207" y="286" width="126" height="26" rx="5" fill="#1c1c36" stroke="#ff9944" stroke-width="0.8"/>
+<text x="270" y="303" text-anchor="middle" font-size="9" fill="#ff9944" font-weight="600">AVD Vectors</text>
+
+<line x1="152" y1="250" x2="193" y2="250" stroke="#44ee88" stroke-width="2" class="stream" marker-end="url(#ahU)"/>
+
+<!-- Central LLM -->
+<rect x="395" y="110" width="260" height="280" rx="16" fill="#101020" stroke="#ff9944" stroke-width="2"/>
+<rect x="415" y="134" width="220" height="44" rx="8" fill="rgba(255,153,68,0.12)" stroke="#ff9944" stroke-width="1"/>
+<text x="525" y="154" text-anchor="middle" font-size="14" font-weight="800" fill="#ff9944">Unified Speech-LLM</text>
+<text x="525" y="172" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">Large Audio Language Model (LALM)</text>
+
+<rect x="415" y="192" width="220" height="32" rx="6" fill="#1c1c36" stroke="#5599ff" stroke-width="0.8"/>
+<text x="525" y="213" text-anchor="middle" font-size="9" fill="#5599ff" font-weight="600">Interleaved Token Context Window</text>
+
+<rect x="415" y="232" width="220" height="32" rx="6" fill="#1c1c36" stroke="#9977ff" stroke-width="0.8"/>
+<text x="525" y="253" text-anchor="middle" font-size="9" fill="#9977ff" font-weight="600">Emotion-Aware Reasoning</text>
+
+<rect x="415" y="272" width="220" height="32" rx="6" fill="#1c1c36" stroke="#ffdd44" stroke-width="0.8"/>
+<text x="525" y="293" text-anchor="middle" font-size="9" fill="#ffdd44" font-weight="600">Dual Output: Text + Emotion Vector</text>
+
+<rect x="415" y="312" width="220" height="32" rx="6" fill="#1c1c36" stroke="#00eec8" stroke-width="0.8"/>
+<text x="525" y="333" text-anchor="middle" font-size="9" fill="#00eec8" font-weight="600">GRPO-Optimized Generation</text>
+
+<text x="525" y="370" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">MinMo / Qwen2-Audio / Custom</text>
+
+<!-- Arrows: Encoder → LLM -->
+<line x1="345" y1="230" x2="393" y2="208" stroke="#5599ff" stroke-width="1.5" class="stream" marker-end="url(#ahUo)"/>
+<line x1="345" y1="265" x2="393" y2="248" stroke="#9977ff" stroke-width="1.5" class="stream" marker-end="url(#ahUp)"/>
+<line x1="345" y1="299" x2="393" y2="288" stroke="#ff9944" stroke-width="1.5" class="stream" marker-end="url(#ahUo)"/>
+
+<!-- Flow Matching TTS -->
+<rect x="705" y="160" width="150" height="180" rx="12" fill="#101020" stroke="#ff5599" stroke-width="1.5"/>
+<text x="780" y="188" text-anchor="middle" font-size="10" font-weight="700" fill="#ff5599">FLOW MATCHING</text>
+<text x="780" y="206" text-anchor="middle" font-size="9" fill="#d0d0e8" class="mono">CFM + DiT TTS</text>
+<rect x="717" y="218" width="126" height="26" rx="5" fill="#1c1c36" stroke="#ff5599" stroke-width="0.8"/>
+<text x="780" y="235" text-anchor="middle" font-size="9" fill="#ff5599" font-weight="600">Parallel Mel-Spec Gen</text>
+<rect x="717" y="252" width="126" height="26" rx="5" fill="#1c1c36" stroke="#ffdd44" stroke-width="0.8"/>
+<text x="780" y="269" text-anchor="middle" font-size="9" fill="#ffdd44" font-weight="600">Emo-DPO Optimized</text>
+<rect x="717" y="286" width="126" height="26" rx="5" fill="#1c1c36" stroke="#44ee88" stroke-width="0.8"/>
+<text x="780" y="303" text-anchor="middle" font-size="9" fill="#44ee88" font-weight="600">BigVGAN Vocoder</text>
+
+<line x1="655" y1="250" x2="703" y2="250" stroke="#ff5599" stroke-width="2" class="stream" marker-end="url(#ahUk)"/>
+<text x="679" y="240" text-anchor="middle" font-size="7" fill="#ff5599" class="mono" font-weight="600">text + emo</text>
+
+<!-- Speaker -->
+<circle cx="950" cy="250" r="52" fill="rgba(0,238,200,0.07)" stroke="rgba(0,238,200,0.35)" stroke-width="1.5"/>
+<text x="950" y="240" text-anchor="middle" font-size="30">🔊</text>
+<text x="950" y="268" text-anchor="middle" font-size="10" font-weight="600" fill="#00eec8">Output</text>
+<text x="950" y="320" text-anchor="middle" font-size="9" fill="#d0d0e8">Prosodically rich</text>
+<text x="950" y="336" text-anchor="middle" font-size="9" fill="#d0d0e8">emotionally matched voice</text>
+
+<line x1="855" y1="250" x2="896" y2="250" stroke="#00eec8" stroke-width="2" class="stream" marker-end="url(#ahU)"/>
+
+<!-- Feedback loop -->
+<path d="M 925 310 Q 925 450 525 450 Q 125 450 125 310" fill="none" stroke="rgba(0,238,200,0.35)" stroke-width="2" stroke-dasharray="8 4" class="stream"/>
+<text x="525" y="440" text-anchor="middle" font-size="10" font-weight="700" fill="#00eec8">CONTINUOUS EMOTION FEEDBACK LOOP</text>
+<text x="525" y="458" text-anchor="middle" font-size="9" fill="#d0d0e8">User's reaction feeds back → prosodic context is never lost between turns</text>
+
+<!-- Target latency -->
+<rect x="415" y="470" width="220" height="24" rx="12" fill="rgba(0,238,200,0.1)" stroke="rgba(0,238,200,0.3)" stroke-width="1"/>
+<text x="525" y="487" text-anchor="middle" font-size="12" font-weight="800" fill="#00eec8" class="mono">Target: sub-300ms E2E</text>
+
+</svg>
+</div>
+
+<div class="detail-grid">
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#ff9944"></span>Reference Unified Models (2025-26)</h4>
+    <div class="detail-row"><span class="k">MinMo (~8B params)</span><span class="v" style="color:#ff9944">Full-duplex · emotion ctrl</span></div>
+    <div class="detail-row"><span class="k">Qwen2-Audio</span><span class="v" style="color:#9977ff">Whisper-large + SFT + DPO</span></div>
+    <div class="detail-row"><span class="k">DiVA</span><span class="v" style="color:#44ee88">Context distill · no SFT data</span></div>
+    <div class="detail-row"><span class="k">VoiceTextBlender (3B)</span><span class="v" style="color:#00eec8">Joint SFT + LoRA</span></div>
+  </div>
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#00eec8"></span>Unified vs. Cascaded</h4>
+    <div class="detail-row"><span class="k">Information loss</span><span class="v" style="color:#44ee88">None — emotion preserved E2E</span></div>
+    <div class="detail-row"><span class="k">Latency</span><span class="v" style="color:#00eec8">No cascaded handoff delays</span></div>
+    <div class="detail-row"><span class="k">Dynamic prosody</span><span class="v" style="color:#ff5599">Intra-utterance emotion shifts</span></div>
+    <div class="detail-row"><span class="k">Production ready?</span><span class="v" style="color:#ffdd44">12-18 month horizon</span></div>
+  </div>
+  <div class="detail-card">
+    <h4><span class="dot" style="background:#ff5599"></span>Presentation Framing</h4>
+    <div class="detail-row"><span class="k">Old paradigm</span><span class="v" style="color:#ff4455">"Deaf LLMs" + text pipe</span></div>
+    <div class="detail-row"><span class="k">New paradigm</span><span class="v" style="color:#44ee88">"Hearing LLMs" + dual tokens</span></div>
+    <div class="detail-row"><span class="k">Visual metaphor</span><span class="v" style="color:#00eec8">Loop diagram, not pipeline</span></div>
+    <div class="detail-row"><span class="k">Demo moment</span><span class="v" style="color:#ffdd44">Sigh → empathetic response</span></div>
+  </div>
+</div>
+</div>
+
+
+
+</div><!-- /canvas -->
+
+<div style="text-align:center;padding:40px;font-size:0.72rem;color:var(--tx2);">
+  Fine-Tuning LLMs for Voice-First Consumer Experiences · Suvendu Mohanty · 2026
+</div>
+
+<script>
+function show(idx) {
+  document.querySelectorAll('.layer').forEach((l,i) => l.classList.toggle('visible', i===idx));
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('on', i===idx));
+}
+</script>
+</body>
+</html>
